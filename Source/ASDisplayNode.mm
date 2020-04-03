@@ -458,6 +458,9 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
         CGFloat cornerRadius = self->_cornerRadius;
         ASCornerRoundingType cornerRoundingType = self->_cornerRoundingType;
         UIColor *backgroundColor = self->_backgroundColor;
+        // Resolve dynamic color for the current user interface style
+        UITraitCollection *tempTraitCollection = [UITraitCollection traitCollectionWithUserInterfaceStyle:self->_primitiveTraitCollection.userInterfaceStyle];
+        backgroundColor = [backgroundColor resolvedColorWithTraitCollection:tempTraitCollection];
         self->__instanceLock__.unlock();
         // TODO: we should resolve color using node's trait collection
         // but Texture changes it from many places, so we may receive the wrong one.
@@ -594,7 +597,10 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
   } else {
     TIME_SCOPED(_debugTimeToCreateView);
     _view = [self _locked_viewToLoad];
-    _primitiveTraitCollection = ASPrimitiveTraitCollectionFromUITraitCollection(_view.traitCollection);
+    if ([self supernode] == nil) {
+      // Move to supernode wil propagateDown other way
+        _primitiveTraitCollection = ASPrimitiveTraitCollectionFromUITraitCollection(_view.traitCollection);
+    }
     _view.asyncdisplaykit_node = self;
     _layer = _view.layer;
   }

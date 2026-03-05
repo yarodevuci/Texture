@@ -533,22 +533,37 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
   // Special handling of wrapping UIKit components
   if (checkFlag(Synchronous)) {
     [self checkResponderCompatibility];
-    
+
     // UIImageView layers. More details on the flags
     if ([_viewClass isSubclassOfClass:[UIImageView class]]) {
       _flags.canClearContentsOfLayer = NO;
       _flags.canCallSetNeedsDisplayOfLayer = NO;
     }
-      
+
     // UIActivityIndicator
     if ([_viewClass isSubclassOfClass:[UIActivityIndicatorView class]]
         || [_viewClass isSubclassOfClass:[UIVisualEffectView class]]) {
       self.opaque = NO;
     }
-      
+
     // CAEAGLLayer
     if([[view.layer class] isSubclassOfClass:[CAEAGLLayer class]]){
       _flags.canClearContentsOfLayer = NO;
+    }
+
+    // Telegram: custom views that don't override drawRect manage their own
+    // rendering (animation views, custom layers). Don't clear their contents
+    // and don't call setNeedsDisplay — it interferes with their rendering.
+    {
+      static IMP defaultDrawRect = NULL;
+      static dispatch_once_t onceToken;
+      dispatch_once(&onceToken, ^{
+        defaultDrawRect = [UIView instanceMethodForSelector:@selector(drawRect:)];
+      });
+      if ([_viewClass instanceMethodForSelector:@selector(drawRect:)] == defaultDrawRect) {
+        _flags.canClearContentsOfLayer = NO;
+        _flags.canCallSetNeedsDisplayOfLayer = NO;
+      }
     }
   }
 
@@ -2671,7 +2686,9 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
     _flags.isEnteringHierarchy = NO;
 
     // If we don't have contents finished drawing by the time we are on screen, immediately add the placeholder (if it is enabled and we do have something to draw).
-    if (self.contents == nil) {
+    // Telegram: only call setNeedsDisplay for nodes that implement the Texture display pipeline.
+    // Prevents interference with custom view wrappers (UIImageView, animation views).
+    if (self.contents == nil && [self _implementsDisplay]) {
       CALayer *layer = self.layer;
       [layer setNeedsDisplay];
       
@@ -3019,15 +3036,18 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
         [self setDisplaySuspended:NO];
       } else {
         [self setDisplaySuspended:YES];
-        //schedule clear contents on next runloop
-        dispatch_async(dispatch_get_main_queue(), ^{
-          self->__instanceLock__.lock();
-          ASInterfaceState interfaceState = self->_interfaceState;
-          self->__instanceLock__.unlock();
-          if (ASInterfaceStateIncludesDisplay(interfaceState) == NO) {
-            [self clearContents];
-          }
-        });
+        // Telegram: skip clearing contents when disableClearContentsOnHide is set
+        if (!self.disableClearContentsOnHide) {
+          //schedule clear contents on next runloop
+          dispatch_async(dispatch_get_main_queue(), ^{
+            self->__instanceLock__.lock();
+            ASInterfaceState interfaceState = self->_interfaceState;
+            self->__instanceLock__.unlock();
+            if (ASInterfaceStateIncludesDisplay(interfaceState) == NO) {
+              [self clearContents];
+            }
+          });
+        }
       }
     } else {
       // NOTE: This case isn't currently supported as setInterfaceState: isn't exposed externally, and all
@@ -3039,15 +3059,18 @@ ASDISPLAYNODE_INLINE BOOL subtreeIsRasterized(ASDisplayNode *node) {
             [ASDisplayNode scheduleNodeForRecursiveDisplay:self];
           } else {
             [[self asyncLayer] cancelAsyncDisplay];
-            //schedule clear contents on next runloop
-            dispatch_async(dispatch_get_main_queue(), ^{
-              self->__instanceLock__.lock();
-              ASInterfaceState interfaceState = self->_interfaceState;
-              self->__instanceLock__.unlock();
-              if (ASInterfaceStateIncludesDisplay(interfaceState) == NO) {
-                [self clearContents];
-              }
-            });
+            // Telegram: skip clearing contents when disableClearContentsOnHide is set
+            if (!self.disableClearContentsOnHide) {
+              //schedule clear contents on next runloop
+              dispatch_async(dispatch_get_main_queue(), ^{
+                self->__instanceLock__.lock();
+                ASInterfaceState interfaceState = self->_interfaceState;
+                self->__instanceLock__.unlock();
+                if (ASInterfaceStateIncludesDisplay(interfaceState) == NO) {
+                  [self clearContents];
+                }
+              });
+            }
           }
         }
       }

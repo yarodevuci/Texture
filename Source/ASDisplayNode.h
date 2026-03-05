@@ -743,6 +743,15 @@ ASDK_EXTERN NSInteger const ASDefaultDrawingPriority;
 @property            UIViewAutoresizing autoresizingMask;   // default==UIViewAutoresizingNone (undefined for layer-backed nodes)
 
 /**
+ * When YES, prevents layer contents from being cleared when the node exits
+ * the display interface state range. Useful for nodes wrapping animated views
+ * (e.g. UIImageView with animations) where clearing contents kills the animation.
+ * Default is NO (stock Texture behavior — clears contents when off-screen).
+ * Ported from Telegram's AsyncDisplayKit fork.
+ */
+@property (nonatomic) BOOL disableClearContentsOnHide;
+
+/**
  * @abstract Content margins
  *
  * @discussion This property is bridged to its UIView counterpart.

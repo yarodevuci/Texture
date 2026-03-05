@@ -562,6 +562,15 @@ ASDK_EXTERN NSInteger const ASDefaultDrawingPriority;
  */
 @property BOOL automaticallyRelayoutOnLayoutMarginsChanges;
 
+/**
+ * When YES, prevents layer contents from being cleared when the node exits
+ * the display interface state range. Useful for nodes wrapping animated views
+ * (e.g. UIImageView with animations) where clearing contents kills the animation.
+ * Default is NO (stock Texture behavior — clears contents when off-screen).
+ * Ported from Telegram's AsyncDisplayKit fork.
+ */
+@property (nonatomic) BOOL disableClearContentsOnHide;
+
 @end
 
 /**
@@ -741,15 +750,6 @@ ASDK_EXTERN NSInteger const ASDefaultDrawingPriority;
 @property            BOOL needsDisplayOnBoundsChange;       // default==NO
 @property            BOOL autoresizesSubviews;              // default==YES (undefined for layer-backed nodes)
 @property            UIViewAutoresizing autoresizingMask;   // default==UIViewAutoresizingNone (undefined for layer-backed nodes)
-
-/**
- * When YES, prevents layer contents from being cleared when the node exits
- * the display interface state range. Useful for nodes wrapping animated views
- * (e.g. UIImageView with animations) where clearing contents kills the animation.
- * Default is NO (stock Texture behavior — clears contents when off-screen).
- * Ported from Telegram's AsyncDisplayKit fork.
- */
-@property (nonatomic) BOOL disableClearContentsOnHide;
 
 /**
  * @abstract Content margins

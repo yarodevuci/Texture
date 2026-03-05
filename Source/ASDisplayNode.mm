@@ -62,6 +62,7 @@ static ASDisplayNodeNonFatalErrorBlock _nonFatalErrorBlock = nil;
 @dynamic layoutElementType;
 
 @synthesize threadSafeBounds = _threadSafeBounds;
+@synthesize disableClearContentsOnHide = _disableClearContentsOnHide;
 
 static std::atomic_bool suppressesInvalidCollectionUpdateExceptions = ATOMIC_VAR_INIT(NO);
 static std::atomic_bool storesUnflattenedLayouts = ATOMIC_VAR_INIT(NO);
